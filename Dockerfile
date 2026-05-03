@@ -23,8 +23,7 @@ RUN pip install --no-cache-dir "pygobject<=3.50.0"
 # Install the rest of the dependencies
 RUN pip install --no-cache-dir ".[tests]" || pip install --no-cache-dir .
 
-# Pass --build-arg CACHEBUST=$(date +%s) to force this layer to rebuild
-ARG CACHEBUST=1
+# Copy the rest of the source
 COPY src/ ./src/
 COPY locale/ ./locale/
 

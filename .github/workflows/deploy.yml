@@ -18,10 +18,5 @@ jobs:
           script: |
             cd /opt/sharly-chess-cloud
             git pull origin main
-
-            export DOMAIN_NAME=${{ secrets.DOMAIN_NAME }}
-            export TRAEFIK_NETWORK=${{ secrets.TRAEFIK_NETWORK }}
-
-            docker compose build --build-arg CACHEBUST=$(date +%s)
-            docker compose up -d --force-recreate
+            docker compose up -d --build
             docker image prune -f
