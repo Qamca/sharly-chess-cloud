@@ -1,26 +1,31 @@
+# This is set up to work with traefik as a reverse proxy. 
+# You might need to change this file depending on how you want to run it.
+# Remember to set the CLOUD_MODE and ADMIN_PASSWORD in .env before running.
+
 services:
   sharly-chess:
     build: .
     container_name: sharly-chess
     restart: unless-stopped
     env_file: .env
+    # We use the array format [] to avoid any quote/syntax errors
+    command: ["sh", "-c", "yes n | python src/server_cloud.py --port 8080"]
     volumes:
       - sharly-chess-events:/app/events
       - sharly-chess-tmp:/app/tmp
     networks:
-      - traefik-public   # ← must match the network name used by your Traefik instance
+      - n8n-traefik_default
     labels:
       - "traefik.enable=true"
-      # ↓ Replace chess.example.com with your actual subdomain
-      - "traefik.http.routers.sharly-chess.rule=Host(`chess.example.com`)"
+      # Replace the domain with your own
+      - "traefik.http.routers.sharly-chess.rule=Host(`sharly-chess.your-domain.com`)"
       - "traefik.http.routers.sharly-chess.entrypoints=websecure"
-      # ↓ Replace letsencrypt with the name of your Traefik certificate resolver
-      - "traefik.http.routers.sharly-chess.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.sharly-chess.tls.certresolver=myresolver"
       - "traefik.http.services.sharly-chess.loadbalancer.server.port=8080"
 
 networks:
   traefik-public:
-    external: true   # references the network that Traefik and n8n already use
+    external: true
 
 volumes:
   sharly-chess-events:
