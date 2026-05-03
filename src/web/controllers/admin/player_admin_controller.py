@@ -1,4 +1,5 @@
 import csv
+import re
 from collections import defaultdict, Counter
 from collections.abc import Callable
 from datetime import date
@@ -1707,6 +1708,49 @@ class PlayerAdminController(BaseEventAdminController):
         web_context = PlayerAdminWebContext(request)
         return self._render_players_import_modal(web_context)
 
+    @staticmethod
+    def _preprocess_csv_rows(rows: list[list[str]]) -> list[list[str]]:
+        """Normalise a raw CSV so it works with Sharly Chess's expected column names.
+
+        - Skips leading single-column preamble rows (common in website exports).
+        - Renames headers to snake_case; maps "email" -> "mail" and any column
+          whose name contains "rating" -> "rating".
+        - Extracts the first 1-4 digit number from the rating column (handles
+          values like "2 034 (national)" or "Elo: 1850").
+        """
+
+        _DROP_COLUMNS = {'registration_date', 'date_of_registration', 'registered', 'signup_date'}
+
+        def _snake(h: str) -> str:
+            if 'rating' in h.lower():
+                return 'rating'
+            if h.lower() == 'email':
+                return 'mail'
+            return re.sub(r'[^0-9a-zA-Z]+', '_', h.strip().lower()).strip('_')
+
+        # Skip single-column preamble rows (website metadata before the real table)
+        start = next((i for i, r in enumerate(rows) if len(r) > 1), None)
+        if start is None:
+            return []
+        rows = [list(r) for r in rows[start:]]  # copy so we can mutate
+
+        rows[0] = [_snake(h) for h in rows[0]]
+
+        # Drop columns that Sharly Chess has no field for
+        drop_indices = {i for i, h in enumerate(rows[0]) if h in _DROP_COLUMNS or 'registr' in h}
+        if drop_indices:
+            rows = [[v for i, v in enumerate(row) if i not in drop_indices] for row in rows]
+
+        # Extract bare integer from rating column (e.g. "Elo: 1 850" -> "1850")
+        rating_idx = next((i for i, h in enumerate(rows[0]) if h == 'rating'), None)
+        if rating_idx is not None:
+            for row in rows[1:]:
+                if rating_idx < len(row):
+                    m = re.search(r'(?<!\d)\d{1,4}(?!\d)', row[rating_idx])
+                    row[rating_idx] = m.group(0) if m else ''
+
+        return rows
+
     @classmethod
     def _read_csv_file(cls, file_path: Path) -> dict[str, list[str]]:
         if file_path.suffix != '.csv':
@@ -1716,22 +1760,31 @@ class PlayerAdminController(BaseEventAdminController):
                     expected='.csv',
                 )
             )
-        content_by_column: dict[str, list[str]] = {}
         with open(file_path, 'rb') as raw_file:
-            encoding = chardet.detect(raw_file.read())['encoding']
-        with open(file_path, 'r', encoding=encoding) as csvfile:
+            detected = chardet.detect(raw_file.read())['encoding'] or 'utf-8'
+        # utf-8-sig transparently strips a BOM when present; safe for plain UTF-8 too
+        encoding = 'utf-8-sig' if detected.lower().replace('-', '').startswith('utf8') else detected
+        with open(file_path, 'r', encoding=encoding, newline='') as csvfile:
             try:
                 dialect = csv.Sniffer().sniff(''.join(islice(csvfile, 2)))
             except csv.Error:
                 dialect = csv.excel
-
             csvfile.seek(0)
-            reader = csv.DictReader(csvfile, dialect=dialect)
-            if reader.fieldnames:
-                content_by_column = {header: [] for header in reader.fieldnames}
-                for row in reader:
-                    for header in reader.fieldnames:
-                        content_by_column[header].append(row[header].strip())
+            try:
+                rows = list(csv.reader(csvfile, dialect=dialect))
+            except ValueError:
+                csvfile.seek(0)
+                rows = list(csv.reader(csvfile, dialect=csv.excel))
+
+        rows = cls._preprocess_csv_rows(rows)
+        if not rows:
+            return {}
+
+        header, data_rows = rows[0], rows[1:]
+        content_by_column: dict[str, list[str]] = {h: [] for h in header}
+        for row in data_rows:
+            for i, h in enumerate(header):
+                content_by_column[h].append(row[i].strip() if i < len(row) else '')
         return content_by_column
 
     @classmethod
