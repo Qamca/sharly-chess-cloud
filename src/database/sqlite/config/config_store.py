@@ -33,6 +33,7 @@ class StoredConfig:
     date_formatter: str
     federation: str | None = None
     locale: str | None = None
+    cloud_admin_password_hash: str | None = None
     stored_player_category_sets: list[StoredPlayerCategorySet] = field(
         default_factory=list[StoredPlayerCategorySet]
     )

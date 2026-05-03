@@ -1,4 +1,5 @@
 import asyncio
+import os
 import platform
 import signal
 import socket
@@ -127,6 +128,16 @@ class ServerEngine(Engine):
             )
         )
 
+        admin_password = os.environ.get('ADMIN_PASSWORD')
+        if admin_password:
+            from argon2 import PasswordHasher
+            from database.sqlite.config.config_database import ConfigDatabase
+
+            ph = PasswordHasher()
+            with ConfigDatabase(write=True) as config_db:
+                config_db.set_cloud_admin_password_hash(ph.hash(admin_password))
+            logger.info('Cloud admin password updated from ADMIN_PASSWORD environment variable.')
+
         for data_source in DataSourceManager().objects():
             data_source.on_app_init()
 
@@ -226,12 +237,15 @@ class ServerEngine(Engine):
         )
         self.__class__.app = app
 
+        cloud_mode = os.environ.get('CLOUD_MODE', '').lower() in ('true', '1', 'yes')
         config = uvicorn.Config(
             app=app,
             host=sharly_chess_config.web_host,
             port=sharly_chess_config.web_port,
             log_config=logging_config,
             timeout_graceful_shutdown=5,
+            proxy_headers=cloud_mode,
+            forwarded_allow_ips='*' if cloud_mode else None,
         )
         server = uvicorn.Server(config)
 

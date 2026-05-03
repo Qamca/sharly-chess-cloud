@@ -99,6 +99,7 @@ class ConfigDatabase(MigrationDatabase):
             launch_browser=self.load_bool_from_database_field(row['launch_browser']),
             locale=row['locale'],
             date_formatter=row['date_formatter'],
+            cloud_admin_password_hash=row.get('cloud_admin_password_hash'),
         )
 
     def _get_stored_config(self) -> StoredConfig:
@@ -134,6 +135,20 @@ class ConfigDatabase(MigrationDatabase):
             f'UPDATE `info` SET {", ".join(field_sets)}', tuple(fields.values())
         )
         return self._get_stored_config()
+
+    def load_cloud_admin_password_hash(self) -> str | None:
+        """Returns the stored cloud admin password hash, or None if not set."""
+        self.execute('SELECT `cloud_admin_password_hash` FROM `info`')
+        row = self.fetchone()
+        if row:
+            return row['cloud_admin_password_hash']
+        return None
+
+    def set_cloud_admin_password_hash(self, password_hash: str):
+        """Persists the cloud admin password hash."""
+        self.execute(
+            'UPDATE `info` SET `cloud_admin_password_hash` = ?', (password_hash,)
+        )
 
     # ---------------------------------------------------------------------------------
     # StoredPlugin

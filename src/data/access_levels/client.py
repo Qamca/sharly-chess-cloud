@@ -1,3 +1,4 @@
+import os
 from functools import cached_property, cache
 from typing import TYPE_CHECKING, Optional, Collection
 
@@ -16,7 +17,13 @@ from data.access_levels.access_levels import AccessLevel
 from data.player import Player
 from data.tournament import Tournament
 from utils.enum import Result
-from web.session import SessionUserAccountId, SessionUserAccountPasswordHash
+from web.session import (
+    SessionUserAccountId,
+    SessionUserAccountPasswordHash,
+    SessionCloudAdminAuthenticated,
+)
+
+CLOUD_MODE: bool = os.environ.get('CLOUD_MODE', '').lower() in ('true', '1', 'yes')
 
 if TYPE_CHECKING:
     from data.event import Event
@@ -42,11 +49,13 @@ class Client:
         self.account = self._get_account()
 
     def _get_account(self) -> Account:
-        if self.host in [LOCALHOST_IP, LOCALHOST_NAME]:
+        if not CLOUD_MODE and self.host in [LOCALHOST_IP, LOCALHOST_NAME]:
             if self.event:
                 return self.event.administrator_account
             return Account.predefined_administrator_account()
         if not self.event:
+            if CLOUD_MODE and SessionCloudAdminAuthenticated(self.request).get():
+                return Account.predefined_administrator_account()
             return Account.predefined_anonymous_account()
         account_id_handler = SessionUserAccountId(self.request, self.event)
         account_id = account_id_handler.get()

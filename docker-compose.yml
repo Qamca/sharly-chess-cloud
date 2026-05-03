@@ -1,0 +1,27 @@
+services:
+  sharly-chess:
+    build: .
+    container_name: sharly-chess
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - sharly-chess-events:/app/events
+      - sharly-chess-tmp:/app/tmp
+    networks:
+      - traefik-public   # ← must match the network name used by your Traefik instance
+    labels:
+      - "traefik.enable=true"
+      # ↓ Replace chess.example.com with your actual subdomain
+      - "traefik.http.routers.sharly-chess.rule=Host(`chess.example.com`)"
+      - "traefik.http.routers.sharly-chess.entrypoints=websecure"
+      # ↓ Replace letsencrypt with the name of your Traefik certificate resolver
+      - "traefik.http.routers.sharly-chess.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sharly-chess.loadbalancer.server.port=8080"
+
+networks:
+  traefik-public:
+    external: true   # references the network that Traefik and n8n already use
+
+volumes:
+  sharly-chess-events:
+  sharly-chess-tmp:

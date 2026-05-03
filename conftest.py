@@ -217,3 +217,86 @@ def api_request_context(
     request_context = playwright.request.new_context(base_url='http://127.0.0.1:9000')
     yield request_context
     request_context.dispose()
+
+
+class CloudBackendServer(BackendServer):
+    """Backend server running in CLOUD_MODE on a separate port for e2e tests."""
+
+    def __init__(self):
+        super().__init__(host=TestConfig.TEST_HOST, port=TestConfig.CLOUD_TEST_PORT)
+
+    def start(self):
+        project_root = Path(__file__).parent
+        src_path = str((project_root / 'src').resolve())
+
+        cloud_env = os.environ.copy()
+        cloud_env.update(TestConfig.get_test_env_vars())
+        current_pythonpath = cloud_env.get('PYTHONPATH', '')
+        cloud_env['PYTHONPATH'] = (
+            f'{src_path}{os.pathsep}{current_pythonpath}'
+            if current_pythonpath
+            else src_path
+        )
+        cloud_env['CLOUD_MODE'] = 'true'
+        cloud_env['ADMIN_PASSWORD'] = TestConfig.CLOUD_ADMIN_PASSWORD
+
+        data_dir = TestConfig.CLOUD_TEST_DATA_DIR.resolve()
+        log_file = data_dir / f'server_cloud_{int(time.time())}.log'
+        self.log_file_handle = open(log_file, 'w')
+
+        cmd = [
+            sys.executable,
+            str((project_root / 'src' / 'server_cloud.py').resolve()),
+            '--path', str(data_dir),
+            '--port', str(TestConfig.CLOUD_TEST_PORT),
+        ]
+
+        self.process = subprocess.Popen(
+            cmd,
+            stdout=self.log_file_handle,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=cloud_env,
+            cwd=str(project_root),
+        )
+
+        self._wait_for_server()
+
+
+@pytest.fixture(scope='session')
+def cloud_backend_server(request, set_working_dir):
+    """Starts a second server instance in CLOUD_MODE on port 9001 for e2e tests."""
+    if not any(item.get_closest_marker('e2e') for item in request.session.items):
+        yield None
+        return
+
+    data_dir = TestConfig.CLOUD_TEST_DATA_DIR.resolve()
+    data_dir.mkdir(parents=True, exist_ok=True)
+    for item in data_dir.iterdir():
+        if item.is_file() or item.is_symlink():
+            item.unlink()
+        elif item.is_dir():
+            shutil.rmtree(item, onerror=shutil_delete_onerror)
+
+    server = CloudBackendServer()
+    print(f'Starting cloud server on {server.host}:{server.port}')
+    server.start()
+    yield server
+    print(f'Stopping cloud server on {server.host}:{server.port}')
+    server.stop()
+
+
+@pytest.fixture(scope='function')
+def cloud_page(browser: Browser, cloud_backend_server):
+    """A fresh browser context connected to the CLOUD_MODE server (port 9001)."""
+    if not cloud_backend_server:
+        pytest.skip('Cloud backend server not available')
+    context = browser.new_context(
+        base_url=f'http://{TestConfig.TEST_HOST}:{TestConfig.CLOUD_TEST_PORT}',
+        viewport={'width': 1600, 'height': 1000},
+    )
+    page = context.new_page()
+    page.set_default_timeout(15000)
+    page.set_default_navigation_timeout(10000)
+    yield page
+    context.close()

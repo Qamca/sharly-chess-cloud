@@ -181,6 +181,12 @@ class SessionUserAccountPasswordHash(EventNoneSessionVariable[str]):
         return 'account_password_hash'
 
 
+class SessionCloudAdminAuthenticated(BoolSessionVariable):
+    @property
+    def key(self) -> str:
+        return 'cloud_admin_authenticated'
+
+
 @dataclass
 class LastBoardUpdated:
     tournament_id: int = 0

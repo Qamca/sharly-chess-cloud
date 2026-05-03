@@ -1,0 +1,86 @@
+{% import '../macros.j2' as macros with context %}
+{% import '../../admin/common/macros.j2' as admin_macros with context %}
+
+<div class="modal-dialog modal-dialog-scrollable admin-profile-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                {{ _('Admin login') }}
+            </h2>
+        </div>
+        <div class="modal-body">
+            {% if cloud_admin_authenticated %}
+                <h4>{{ _('Logged in as administrator') }}</h4>
+                <form
+                    id="modal-form"
+                    hx-trigger="submit, enterKeypressFromModal"
+                    hx-post="{{ url_for('cloud-admin-logout') }}"
+                    hx-target="body"
+                    hx-indicator="#please-wait"
+                >
+                    <div class="row gy-2 gx-3">
+                        <div class="col-12">
+                            {{ _('You are logged in as the cloud administrator and have full administration privileges.') }}
+                        </div>
+                        <div class="col-12 d-flex justify-content-end">
+                            <button
+                                type="submit"
+                                form="modal-form"
+                                class="log-button text-nowrap white btn btn-primary"
+                            >
+                                <i class="bi-person-fill-x pe-1"></i>
+                                {{ _('Log out') }}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            {% else %}
+                <h4>{{ _('Not logged in') }}</h4>
+                <form
+                    id="modal-form"
+                    hx-trigger="submit, enterKeypressFromModal"
+                    hx-post="{{ url_for('cloud-admin-login') }}"
+                    hx-target="body"
+                    hx-indicator="#please-wait"
+                >
+                    <div class="row gy-2 gx-3">
+                        <div class="col-12">
+                            {{ admin_macros.password_input(
+                                name='password',
+                                label=_('Admin password:'),
+                                data=data, errors=errors
+                            ) }}
+                        </div>
+                        <div class="col-12 d-flex justify-content-end">
+                            <button
+                                type="submit"
+                                form="modal-form"
+                                class="log-button text-nowrap white btn btn-primary"
+                            >
+                                <i class="bi-person-check-fill pe-1"></i>
+                                {{ _('Log in') }}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+        <div class="modal-footer">
+            <button
+                type="button"
+                class="btn btn-secondary text-nowrap d-inline-flex gap-2 align-items-center"
+                data-bs-dismiss="modal"
+            >
+                <i class="bi-x-circle-fill lh-1"></i>
+                {{ _('Close') }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    requestRefresh();
+    $('.log-button').click(() => {
+        refreshRequested = false;
+    });
+</script>

@@ -10,16 +10,90 @@ from litestar.response import Template
 from litestar_htmx import HTMXTemplate, ClientRedirect
 
 from common.i18n import _
+from data.access_levels.client import CLOUD_MODE
 from data.account import Account
 from data.event import Event
+from database.sqlite.config.config_database import ConfigDatabase
 from database.sqlite.event.event_database import EventDatabase
 from web.controllers.admin.base_admin_controller import AdminWebContext
 from web.controllers.admin.base_event_admin_controller import BaseEventAdminWebContext
 from web.controllers.base_controller import WebContext, BaseController
 from web.guards import EventGuard
 from web.messages import Message
-from web.session import SessionUserAccountId, SessionUserAccountPasswordHash
+from web.session import (
+    SessionUserAccountId,
+    SessionUserAccountPasswordHash,
+    SessionCloudAdminAuthenticated,
+)
 from web.urls import admin_event_url
+
+
+class CloudAdminController(BaseController):
+    """Handles global cloud admin login/logout. No EventGuard — these routes have no event."""
+
+    @classmethod
+    def _render_modal(
+        cls,
+        web_context: AdminWebContext,
+        data: dict[str, str] | None = None,
+        errors: dict[str, str] | None = None,
+    ) -> Template:
+        return HTMXTemplate(
+            template_name='common/profile/cloud_admin_modal.html',
+            context=web_context.template_context
+            | {
+                'data': data or {},
+                'errors': errors or {},
+            },
+            re_target='#modal-wrapper',
+        )
+
+    @get(path='/cloud-admin-modal', name='cloud-admin-modal')
+    async def htmx_cloud_admin_modal(self, request: HTMXRequest) -> Template:
+        return self._render_modal(AdminWebContext(request))
+
+    @post(path='/cloud-admin-login', name='cloud-admin-login')
+    async def htmx_cloud_admin_login(
+        self,
+        request: HTMXRequest,
+        data: Annotated[
+            dict[str, str],
+            Body(media_type=RequestEncodingType.URL_ENCODED),
+        ],
+    ) -> Template | ClientRedirect:
+        web_context = AdminWebContext(request)
+        if not CLOUD_MODE:
+            return ClientRedirect('/')
+        errors: dict[str, str] = {}
+        password: str = WebContext.form_data_to_str(data or {}, 'password') or ''
+        with ConfigDatabase() as config_db:
+            stored_hash = config_db.load_cloud_admin_password_hash()
+        if not stored_hash:
+            errors['password'] = _('Admin password is not configured on this server.')
+        else:
+            ph = PasswordHasher()
+            try:
+                ph.verify(stored_hash, password)
+                if ph.check_needs_rehash(stored_hash):
+                    new_hash = ph.hash(password)
+                    with ConfigDatabase(write=True) as config_db:
+                        config_db.set_cloud_admin_password_hash(new_hash)
+                SessionCloudAdminAuthenticated(request).set(True)
+                Message.success(request, _('Successfully logged in as administrator.'))
+                return ClientRedirect('/')
+            except (VerifyMismatchError, VerificationError):
+                errors['password'] = _('Invalid password.')
+            except InvalidHash:
+                errors['password'] = _(
+                    'Something went wrong. Please ask the server administrator to restart the server with a valid ADMIN_PASSWORD.'
+                )
+        return self._render_modal(web_context, data=data, errors=errors)
+
+    @post(path='/cloud-admin-logout', name='cloud-admin-logout')
+    async def htmx_cloud_admin_logout(self, request: HTMXRequest) -> ClientRedirect:
+        SessionCloudAdminAuthenticated(request).unset()
+        Message.success(request, _('Successfully logged out.'))
+        return ClientRedirect('/')
 
 
 class ProfileWebContext(BaseEventAdminWebContext):
@@ -189,3 +263,4 @@ class ProfileController(BaseController):
         SessionUserAccountPasswordHash(request, event).unset()
         Message.success(request, _('Successfully logged out.'))
         return ClientRedirect(admin_event_url(request, event.uniq_id))
+

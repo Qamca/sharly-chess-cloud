@@ -44,6 +44,11 @@ class TestConfig:
     # Test data configuration
     TEST_DATA_DIR = Path(__file__).parent / 'tmp'
 
+    # Cloud mode test configuration
+    CLOUD_TEST_PORT = 9001
+    CLOUD_TEST_DATA_DIR = Path(__file__).parent / 'tmp_cloud'
+    CLOUD_ADMIN_PASSWORD = 'test-cloud-admin-password'
+
     @classmethod
     def get_test_env_vars(cls) -> Dict[str, str]:
         """Get environment variables for test environment."""

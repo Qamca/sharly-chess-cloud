@@ -5,10 +5,12 @@ from litestar.plugins.htmx import HTMXRequest
 
 from common.i18n import _
 from common.sharly_chess_config import SharlyChessConfig
+from data.access_levels.client import CLOUD_MODE
 from data.event import Event
 from utils.enum import TournamentRating, ScreenType
 from plugins.manager import plugin_manager
 from web.controllers.base_controller import BaseController, WebContext
+from web.session import SessionCloudAdminAuthenticated
 from web.utils import RequestUtils
 
 
@@ -69,6 +71,11 @@ class AdminWebContext(WebContext):
             | {
                 'admin_tab': self.admin_tab,
                 'admin_event': self.admin_event,
+                'cloud_mode': CLOUD_MODE,
+                'cloud_admin_authenticated': (
+                    CLOUD_MODE
+                    and SessionCloudAdminAuthenticated(self.request).get()
+                ),
             }
             | plugin_context
         )

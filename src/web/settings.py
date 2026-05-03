@@ -4,6 +4,8 @@ import posixpath
 import sqlite3
 import typing as t
 from pathlib import Path
+
+_CLOUD_MODE: bool = os.environ.get('CLOUD_MODE', '').lower() in ('true', '1', 'yes')
 from typing import Sequence
 
 import aiosqlite
@@ -45,7 +47,7 @@ from web.controllers.admin.prize_admin_controller import PrizeAdminController
 from web.controllers.admin.prize_config_admin_controller import (
     PrizeConfigAdminController,
 )
-from web.controllers.profile_controller import ProfileController
+from web.controllers.profile_controller import ProfileController, CloudAdminController
 from web.controllers.admin.rotator_admin_controller import RotatorAdminController
 from web.controllers.admin.screen_config_admin_controller import (
     ScreenConfigAdminController,
@@ -105,6 +107,7 @@ _route_handlers: Sequence[ControllerRouterHandler] = [
     QRCodeController,
     AccountAdminController,
     ProfileController,
+    CloudAdminController,
     static_files_router,
     # Plugin controllers
     *[
@@ -262,6 +265,8 @@ stores: dict[str, Store] = {'sessions': SQLiteStore(session_pool)}
 
 _session_config = ServerSideSessionConfig(
     key='sharly-chess-session',
+    secure=_CLOUD_MODE,
+    samesite='lax',
     exclude=[
         r'^/static/*',
         r'^/ws$',
