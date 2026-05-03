@@ -10,6 +10,7 @@ papi-web.ini.*
 tmp/
 db/
 __pycache__/
+.pytest_cache
 
 /build/
 /dist/
