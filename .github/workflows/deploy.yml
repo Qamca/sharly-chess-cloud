@@ -18,5 +18,9 @@ jobs:
           script: |
             cd /opt/sharly-chess-cloud
             git pull origin main
+
+            export DOMAIN_NAME=${{ vars.DOMAIN_NAME }}
+            export TRAEFIK_NETWORK=${{ vars.TRAEFIK_NETWORK }}
+
             docker compose up -d --build
             docker image prune -f

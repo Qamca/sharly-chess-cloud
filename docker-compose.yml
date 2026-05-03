@@ -14,16 +14,16 @@ services:
       - sharly-chess-events:/app/events
       - sharly-chess-tmp:/app/tmp
     networks:
-      - traefik-public
+      - ${TRAEFIK_NETWORK}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.sharly-chess.rule=Host(`sharly-chess.your-domain.com`)" # replace with your domain
+      - "traefik.http.routers.sharly-chess.rule=Host(`${DOMAIN_NAME}`)" # replace with your domain
       - "traefik.http.routers.sharly-chess.entrypoints=websecure"
       - "traefik.http.routers.sharly-chess.tls.certresolver=myresolver" # replace with your resolver
       - "traefik.http.services.sharly-chess.loadbalancer.server.port=8080"
 
 networks:
-  traefik-public:
+  ${TRAEFIK_NETWORK}:
     external: true
 
 volumes:
