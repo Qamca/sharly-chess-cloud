@@ -17,10 +17,9 @@ services:
       - n8n-traefik_default
     labels:
       - "traefik.enable=true"
-      # Replace the domain with your own
-      - "traefik.http.routers.sharly-chess.rule=Host(`sharly-chess.your-domain.com`)"
+      - "traefik.http.routers.sharly-chess.rule=Host(`sharly-chess.your-domain.com`)" # replace with your domain
       - "traefik.http.routers.sharly-chess.entrypoints=websecure"
-      - "traefik.http.routers.sharly-chess.tls.certresolver=myresolver"
+      - "traefik.http.routers.sharly-chess.tls.certresolver=myresolver" # replace with your resolver
       - "traefik.http.services.sharly-chess.loadbalancer.server.port=8080"
 
 networks:

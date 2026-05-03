@@ -2,6 +2,76 @@
 
 _Sharly Chess - © Sharly Chess project 2013-2025_
 
+## Cloud / VPS deployment
+
+This fork adds support for running Sharly Chess on a VPS behind a reverse proxy (Traefik, nginx, etc.) so the admin can log in from anywhere and players can access public screens via a subdomain.
+
+### What was changed
+
+- **`CLOUD_MODE` env var** - disables the localhost admin bypass (which auto-grants admin to `127.0.0.1` requests) and enables secure session cookies.
+- **Global admin password** - set `ADMIN_PASSWORD` in your environment; the hash is stored in the config database on every startup. Log in at `/admin-login`.
+- **`src/server_cloud.py`** - headless server entrypoint that skips the Toga GUI import so the app starts on systems without a display (Docker, VPS).
+- **`Dockerfile` + `docker-compose.yml`** - container setup pre-configured for Traefik with Let's Encrypt TLS.
+- **Proxy headers** - Uvicorn is configured to trust `X-Forwarded-For` from the reverse proxy so real client IPs are logged correctly.
+
+### Quick start (local test)
+
+```bash
+CLOUD_MODE=true ADMIN_PASSWORD=yourpassword python src/server_cloud.py --port 8080
+```
+
+Open [http://127.0.0.1:8080](http://127.0.0.1:8080), click **Admin login** in the sidebar (or go to `/admin-login`), and enter your password.
+
+### Docker + Traefik deployment
+
+**1. Configure `.env`**
+
+```bash
+cp .env.example .env
+# Edit .env:
+#   CLOUD_MODE=true
+#   ADMIN_PASSWORD=<strong password>
+```
+
+**2. Adjust `docker-compose.yml`**
+
+Edit the two Traefik labels to match your setup:
+
+```yaml
+- "traefik.http.routers.sharly-chess.rule=Host(`chess.example.com`)"   # your subdomain
+- "traefik.http.routers.sharly-chess.tls.certresolver=letsencrypt"     # your resolver name
+```
+
+Also verify the `networks.traefik-public` name matches the external network your Traefik instance uses.
+
+**3. Build and run**
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+**4. First login**
+
+Navigate to `https://chess.example.com/admin-login` and enter your `ADMIN_PASSWORD`. You will have full admin access to create events, manage settings, and invite arbiters.
+
+### How authentication works
+
+| Situation | Access granted |
+|-----------|---------------|
+| `CLOUD_MODE=false`, request from `127.0.0.1` | Admin (original localhost bypass) |
+| `CLOUD_MODE=true`, valid `ADMIN_PASSWORD` entered at `/admin-login` | Admin (all events) |
+| `CLOUD_MODE=true`, valid per-event account + password | That event's access level |
+| Everything else | Anonymous (public screens only) |
+
+Per-event accounts (arbiters, result-entry operators, etc.) are unaffected. They continue to log in through the **Profile** button inside each event.
+
+### Data persistence
+
+Event databases and temporary files are stored in Docker named volumes (`sharly-chess-events`, `sharly-chess-tmp`). They survive container restarts and rebuilds. To back up, copy the volume data or use `docker cp`.
+
+---
+
 ## User documentation
 
 **Please visit [sharly-chess.com](https://sharly-chess.com)** (installation guide [here](https://sharly-chess.com/installation)).
