@@ -14,7 +14,7 @@ services:
       - sharly-chess-events:/app/events
       - sharly-chess-tmp:/app/tmp
     networks:
-      - n8n-traefik_default
+      - traefik-public
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.sharly-chess.rule=Host(`sharly-chess.your-domain.com`)" # replace with your domain
