@@ -11,8 +11,6 @@ function setSize() {
     document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
 }
 
-console.log("Live CD test!");
-
 setSize();
 
 window.addEventListener('resize', setSize);
