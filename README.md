@@ -1,4 +1,4 @@
-# _Sharly Chess_
+# _Sharly Chess Cloud_
 
 _Sharly Chess - © Sharly Chess project 2013-2025_
 
@@ -69,6 +69,33 @@ Per-event accounts (arbiters, result-entry operators, etc.) are unaffected. They
 ### Data persistence
 
 Event databases and temporary files are stored in Docker named volumes (`sharly-chess-events`, `sharly-chess-tmp`). They survive container restarts and rebuilds. To back up, copy the volume data or use `docker cp`.
+
+---
+
+## CSV player import improvements
+
+The player import (`Players → Import from file`) accepts CSVs exported from federation websites and other sources with minimal manual cleanup required.
+
+### What is handled automatically
+
+- **Encoding detection** - UTF-8, UTF-8 BOM, and other encodings are detected via `chardet`; BOM is stripped transparently.
+- **Delimiter sniffing** - semicolon, tab, and comma delimiters are detected automatically; falls back to standard comma if sniffing fails.
+- **Preamble rows** - leading single-column metadata rows (e.g. "Export date: 2024-01-01") before the actual table are skipped.
+- **Header normalisation** - column names are lowercased and converted to `snake_case`.
+- **Column aliases**
+  - Any column whose name contains `rating` (e.g. `Elo Rating`, `FIDE Rating`, `national_rating`) is mapped to `rating`.
+  - `Email` / `email` is mapped to `mail`.
+- **Rating value cleaning** - values like `"1 850"`, `"Elo: 2034 (nat)"`, or `"2 034 (national)"` are reduced to a bare integer.
+- **Ignored columns** - columns that Sharly Chess has no field for are dropped silently:
+  - `registration_date`, `date_of_registration`, `registered`, `signup_date`, and any column whose name contains `registr`.
+
+### Running unit tests
+
+Unit tests do not require a running server or Playwright browsers:
+
+```bash
+python3 -m pytest tests/unit/ -v
+```
 
 ---
 
