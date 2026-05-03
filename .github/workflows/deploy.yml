@@ -22,5 +22,5 @@ jobs:
             export DOMAIN_NAME=${{ vars.DOMAIN_NAME }}
             export TRAEFIK_NETWORK=${{ vars.TRAEFIK_NETWORK }}
 
-            docker compose up -d --build
+            docker compose up -d --build --force-recreate
             docker image prune -f
