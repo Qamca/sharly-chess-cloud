@@ -1,27 +1,35 @@
 {% with nav_title=_('Admin login') %}
     <span class="sidebar-tooltip" {{ macros.tooltip_attributes('info', nav_title, 'right') }}>
-        <button
-            data-testid="cloud-admin-button"
-            class="nav-link text-start me-1 position-relative align-items-center"
-            hx-get="{{ url_for('cloud-admin-modal') }}"
-            hx-target="body"
-            hx-indicator="#please-wait"
-            data-bs-toggle="modal"
-            data-bs-target="#modal-wrapper"
-        >
-            <div class="d-block">
-                {% if cloud_admin_authenticated %}
+        {% if cloud_admin_authenticated %}
+            <button
+                data-testid="cloud-admin-button"
+                class="nav-link text-start me-1 position-relative align-items-center"
+                hx-get="{{ url_for('cloud-admin-modal') }}"
+                hx-target="body"
+                hx-indicator="#please-wait"
+                data-bs-toggle="modal"
+                data-bs-target="#modal-wrapper"
+            >
+                <div class="d-block">
                     <i class="bi bi-person-fill-check text-success"></i>
                     <span class="pe-2 expanded-only fw-bold">
                         {{ _('Admin') }}
                     </span>
-                {% else %}
+                </div>
+            </button>
+        {% else %}
+            <a
+                data-testid="cloud-admin-button"
+                class="nav-link text-start me-1 position-relative align-items-center"
+                href="{{ url_for('admin-login-page') }}"
+            >
+                <div class="d-block">
                     <i class="bi bi-person-lock"></i>
                     <span class="pe-2 expanded-only">
                         {{ _('Admin login') }}
                     </span>
-                {% endif %}
-            </div>
-        </button>
+                </div>
+            </a>
+        {% endif %}
     </span>
 {% endwith %}

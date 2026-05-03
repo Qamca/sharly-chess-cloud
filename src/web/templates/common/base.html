@@ -63,8 +63,7 @@
                     {% set redirect_url = '/home' %}
                 {% endif %}
             {% else %}
-            {# Bypass the redirect if the URL contains ?setup=1 #}
-                {% if request.url.path != '/wait' and request.query_params.get('setup') != '1' %}
+                {% if request.url.path not in ['/wait', '/admin-login'] %}
                     {% set redirect_url = '/wait' %}
                 {% endif %}
             {% endif %}

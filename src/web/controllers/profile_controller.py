@@ -6,7 +6,7 @@ from litestar import post, get
 from litestar.enums import RequestEncodingType
 from litestar.params import Body
 from litestar.plugins.htmx import HTMXRequest
-from litestar.response import Template
+from litestar.response import Redirect, Template
 from litestar_htmx import HTMXTemplate, ClientRedirect
 
 from common.i18n import _
@@ -30,6 +30,58 @@ from web.urls import admin_event_url
 
 class CloudAdminController(BaseController):
     """Handles global cloud admin login/logout. No EventGuard — these routes have no event."""
+
+    @classmethod
+    def _render_login_page(
+        cls, request: HTMXRequest, error: str | None = None
+    ) -> Template:
+        web_context = WebContext(request)
+        return Template(
+            template_name='admin_login.html',
+            context=web_context.template_context | {'error': error},
+        )
+
+    @get(path='/admin-login', name='admin-login-page')
+    async def admin_login_page(self, request: HTMXRequest) -> Template | Redirect:
+        if not CLOUD_MODE or SessionCloudAdminAuthenticated(request).get():
+            return Redirect('/')
+        return self._render_login_page(request)
+
+    @post(path='/admin-login', name='admin-login')
+    async def admin_login_submit(
+        self,
+        request: HTMXRequest,
+        data: Annotated[
+            dict[str, str],
+            Body(media_type=RequestEncodingType.URL_ENCODED),
+        ],
+    ) -> Template | Redirect:
+        if not CLOUD_MODE:
+            return Redirect('/')
+        password: str = WebContext.form_data_to_str(data or {}, 'password') or ''
+        with ConfigDatabase() as config_db:
+            stored_hash = config_db.load_cloud_admin_password_hash()
+        if not stored_hash:
+            return self._render_login_page(
+                request, _('Admin password is not configured on this server.')
+            )
+        ph = PasswordHasher()
+        try:
+            ph.verify(stored_hash, password)
+            if ph.check_needs_rehash(stored_hash):
+                with ConfigDatabase(write=True) as config_db:
+                    config_db.set_cloud_admin_password_hash(ph.hash(password))
+            SessionCloudAdminAuthenticated(request).set(True)
+            return Redirect('/home')
+        except (VerifyMismatchError, VerificationError):
+            return self._render_login_page(request, _('Invalid password.'))
+        except InvalidHash:
+            return self._render_login_page(
+                request,
+                _(
+                    'Something went wrong. Please ask the server administrator to restart the server with a valid ADMIN_PASSWORD.'
+                ),
+            )
 
     @classmethod
     def _render_modal(

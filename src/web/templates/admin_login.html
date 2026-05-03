@@ -1,0 +1,37 @@
+{% extends '/common/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card shadow" style="min-width: 360px; max-width: 420px; width: 100%;">
+        <div class="card-body p-4">
+            <h4 class="card-title mb-4 text-center">
+                Sharly Chess — {{ _('Admin login') }}
+            </h4>
+            <form method="post" action="{{ url_for('admin-login') }}">
+                <div class="mb-3">
+                    <label for="password" class="form-label">{{ _('Admin password:') }}</label>
+                    <input
+                        id="password"
+                        type="password"
+                        name="password"
+                        class="form-control {% if error %}is-invalid{% endif %}"
+                        autofocus
+                        autocomplete="current-password"
+                    >
+                    {% if error %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endif %}
+                </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi-person-check-fill pe-1"></i>
+                        {{ _('Log in') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block footer %}{% endblock %}
