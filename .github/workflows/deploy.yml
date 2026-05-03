@@ -22,5 +22,6 @@ jobs:
             export DOMAIN_NAME=${{ secrets.DOMAIN_NAME }}
             export TRAEFIK_NETWORK=${{ secrets.TRAEFIK_NETWORK }}
 
-            docker compose up -d --build
+            docker compose build --build-arg CACHEBUST=$(date +%s)
+            docker compose up -d --force-recreate
             docker image prune -f
