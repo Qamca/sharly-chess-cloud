@@ -128,11 +128,16 @@ class ServerEngine(Engine):
             )
         )
 
+        admin_password_hash = os.environ.get('ADMIN_PASSWORD_HASH')
         admin_password = os.environ.get('ADMIN_PASSWORD')
-        if admin_password:
+        if admin_password_hash:
+            from database.sqlite.config.config_database import ConfigDatabase
+            with ConfigDatabase(write=True) as config_db:
+                config_db.set_cloud_admin_password_hash(admin_password_hash)
+            logger.info('Cloud admin password updated from ADMIN_PASSWORD_HASH environment variable.')
+        elif admin_password:
             from argon2 import PasswordHasher
             from database.sqlite.config.config_database import ConfigDatabase
-
             ph = PasswordHasher()
             with ConfigDatabase(write=True) as config_db:
                 config_db.set_cloud_admin_password_hash(ph.hash(admin_password))
