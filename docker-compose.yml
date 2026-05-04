@@ -8,23 +8,23 @@ services:
     container_name: sharly-chess
     restart: unless-stopped
     env_file: .env
-    # We use the array format [] to avoid any quote/syntax errors
     command: ["sh", "-c", "yes n | python src/server_cloud.py --port 8080"]
     volumes:
       - sharly-chess-events:/app/events
       - sharly-chess-tmp:/app/tmp
     networks:
-      - ${TRAEFIK_NETWORK}
+      - traefik_net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.sharly-chess.rule=Host(`${DOMAIN_NAME}`)" # replace with your domain
+      - "traefik.http.routers.sharly-chess.rule=Host(`${DOMAIN_NAME}`)"
       - "traefik.http.routers.sharly-chess.entrypoints=websecure"
-      - "traefik.http.routers.sharly-chess.tls.certresolver=myresolver" # replace with your resolver
+      - "traefik.http.routers.sharly-chess.tls.certresolver=myresolver"
       - "traefik.http.services.sharly-chess.loadbalancer.server.port=8080"
 
 networks:
-  name: ${TRAEFIK_NETWORK}
-  external: true
+  traefik_net:
+    external: true
+    name: ${TRAEFIK_NETWORK}
 
 volumes:
   sharly-chess-events:
