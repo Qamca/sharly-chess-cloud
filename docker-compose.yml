@@ -16,10 +16,21 @@ services:
       - traefik_net
     labels:
       - "traefik.enable=true"
+      # Main router (all traffic)
       - "traefik.http.routers.sharly-chess.rule=Host(`${DOMAIN_NAME}`)"
       - "traefik.http.routers.sharly-chess.entrypoints=websecure"
       - "traefik.http.routers.sharly-chess.tls.certresolver=myresolver"
       - "traefik.http.services.sharly-chess.loadbalancer.server.port=8080"
+      # Dedicated router for /admin-login with rate limiting (priority wins over catch-all)
+      - "traefik.http.routers.sharly-chess-login.rule=Host(`${DOMAIN_NAME}`) && Path(`/admin-login`)"
+      - "traefik.http.routers.sharly-chess-login.entrypoints=websecure"
+      - "traefik.http.routers.sharly-chess-login.tls.certresolver=myresolver"
+      - "traefik.http.routers.sharly-chess-login.middlewares=admin-login-ratelimit"
+      - "traefik.http.routers.sharly-chess-login.priority=10"
+      # Rate limit: 5 requests/minute average, burst up to 10
+      - "traefik.http.middlewares.admin-login-ratelimit.ratelimit.average=5"
+      - "traefik.http.middlewares.admin-login-ratelimit.ratelimit.burst=10"
+      - "traefik.http.middlewares.admin-login-ratelimit.ratelimit.period=1m"
 
 networks:
   traefik_net:
