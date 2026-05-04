@@ -39,6 +39,6 @@ jobs:
             git pull origin main
             HASH=$(printf '%s' "$HASH_B64" | base64 -d)
             sed -i '/^ADMIN_PASSWORD/d' .env
-            printf 'ADMIN_PASSWORD_HASH=%s\n' "$HASH" >> .env
+            printf "ADMIN_PASSWORD_HASH='%s'\n" "$HASH" >> .env
             docker compose up -d --build
             docker image prune -f
