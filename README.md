@@ -28,32 +28,68 @@ Open [http://127.0.0.1:8080](http://127.0.0.1:8080), click **Admin login** in th
 
 ```bash
 cp .env.example .env
-# Edit .env:
-#   CLOUD_MODE=true
-#   ADMIN_PASSWORD=<strong password>
 ```
 
-**2. Adjust `docker-compose.yml`**
+Edit `.env` and fill in the required values:
 
-Edit the two Traefik labels to match your setup:
-
-```yaml
-- "traefik.http.routers.sharly-chess.rule=Host(`chess.example.com`)"   # your subdomain
-- "traefik.http.routers.sharly-chess.tls.certresolver=letsencrypt"     # your resolver name
+```env
+CLOUD_MODE=true
+ADMIN_PASSWORD=<strong password>
+DOMAIN_NAME=chess.example.com       # your subdomain
+TRAEFIK_NETWORK=traefik-public      # external Docker network your Traefik uses
 ```
 
-Also verify the `networks.traefik-public` name matches the external network your Traefik instance uses.
+`DOMAIN_NAME` and `TRAEFIK_NETWORK` are read by `docker-compose.yml` at runtime — keep them here so `docker compose` commands work correctly from any shell on the server without extra exports.
 
-**3. Build and run**
+**2. Build and run**
 
 ```bash
-docker compose build
-docker compose up -d
+docker compose up -d --build
 ```
 
-**4. First login**
+**3. First login**
 
 Navigate to `https://chess.example.com/admin-login` and enter your `ADMIN_PASSWORD`. You will have full admin access to create events, manage settings, and invite arbiters.
+
+### Other reverse proxies (nginx, Caddy, bare Docker)
+
+The `docker-compose.yml` is Traefik-specific, but the app itself only needs a reverse proxy that:
+
+1. Terminates TLS and forwards HTTP to the container on port `8080`.
+2. Sets the `X-Forwarded-For` and `X-Forwarded-Proto` headers (Uvicorn reads these automatically).
+
+**nginx example** — add to your server block:
+
+```nginx
+location / {
+    proxy_pass         http://127.0.0.1:8080;
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+}
+```
+
+Run the container without Traefik labels by stripping the `labels` and `networks` sections from `docker-compose.yml` and publishing the port directly:
+
+```yaml
+services:
+  sharly-chess:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    command: ["sh", "-c", "yes n | python src/server_cloud.py --port 8080"]
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - sharly-chess-events:/app/events
+      - sharly-chess-tmp:/app/tmp
+
+volumes:
+  sharly-chess-events:
+  sharly-chess-tmp:
+```
+
+`127.0.0.1:8080` binds only to localhost so the port is not exposed publicly. Your reverse proxy reaches it on the same machine. Remove `DOMAIN_NAME` and `TRAEFIK_NETWORK` from `.env` when using this setup.
 
 ### How authentication works
 
