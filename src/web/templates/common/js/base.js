@@ -4,7 +4,9 @@ function setSize() {
     // body.clientWidth (not documentElement.clientWidth) because the scrollbar is on
     // body (overflow:auto !important), so only body.clientWidth reflects the actual
     // usable content width after the body scrollbar is reserved.
-    let vw = document.body.clientWidth;
+    // document.body is null on the first call (script runs in <head>), so fall back to
+    // documentElement which is always available.
+    let vw = (document.body || document.documentElement).clientWidth;
     let vh = document.documentElement.clientHeight;
     document.documentElement.style.setProperty('--vw', `${vw}px`);
     document.documentElement.style.setProperty('--vh', `${vh}px`);
