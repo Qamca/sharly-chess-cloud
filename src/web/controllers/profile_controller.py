@@ -35,7 +35,7 @@ class CloudAdminController(BaseController):
     def _render_login_page(
         cls, request: HTMXRequest, error: str | None = None
     ) -> Template:
-        web_context = WebContext(request)
+        web_context = AdminWebContext(request)
         return Template(
             template_name='admin_login.html',
             context=web_context.template_context | {'error': error},

@@ -1,7 +1,10 @@
 function setSize() {
     //  We store the size of the viewport, without the scrollbars, in CSS variables #}
     //  This is necessary since dvh/dwh is broken on Chrome
-    let vw = document.documentElement.clientWidth;
+    // body.clientWidth (not documentElement.clientWidth) because the scrollbar is on
+    // body (overflow:auto !important), so only body.clientWidth reflects the actual
+    // usable content width after the body scrollbar is reserved.
+    let vw = document.body.clientWidth;
     let vh = document.documentElement.clientHeight;
     document.documentElement.style.setProperty('--vw', `${vw}px`);
     document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -15,6 +18,19 @@ setSize();
 
 window.addEventListener('resize', setSize);
 window.addEventListener('htmx:afterSettle', function () { setSize(); closeTooltips(); });
+
+// body has overflow:auto !important so Bootstrap can't hide the scrollbar when
+// a modal opens. It still adds padding-right as compensation, which causes
+// elements sized to --vw to overflow the narrowed body content area.
+// Strip that padding after Bootstrap applies it and recalculate --vw.
+document.addEventListener('shown.bs.modal', function () {
+    document.body.style.paddingRight = '';
+    setSize();
+});
+document.addEventListener('hidden.bs.modal', function () {
+    document.body.style.paddingRight = '';
+    setSize();
+});
 
 window.addEventListener("htmx:wsBeforeMessage", function(evt) {
     try {

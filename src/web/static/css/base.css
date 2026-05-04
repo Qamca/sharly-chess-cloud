@@ -10,12 +10,17 @@
 	font-family: AtkinsonHyperlegibleNextVF, sans-serif;
 }
 
+html {
+    scrollbar-gutter: stable;
+}
+
 body {
 	background-repeat: no-repeat;
 	background-position: center center;
 	background-size: contain;
 	background-attachment: fixed;
 	overflow: auto !important;
+	scrollbar-gutter: stable;
 }
 
 a:focus, a:active {
