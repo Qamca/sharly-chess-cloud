@@ -22,7 +22,7 @@ services:
       - "traefik.http.routers.sharly-chess.tls.certresolver=myresolver"
       - "traefik.http.services.sharly-chess.loadbalancer.server.port=8080"
       # Dedicated router for login endpoints with rate limiting (priority wins over catch-all)
-      - "traefik.http.routers.sharly-chess-login.rule=Host(`${DOMAIN_NAME}`) && Path(`/admin-login`)"
+      - "traefik.http.routers.sharly-chess-login.rule=Host(`${DOMAIN_NAME}`) && (Path(`/admin-login`) || PathPrefix(`/profile-login/`))"
       - "traefik.http.routers.sharly-chess-login.entrypoints=websecure"
       - "traefik.http.routers.sharly-chess-login.tls.certresolver=myresolver"
       - "traefik.http.routers.sharly-chess-login.middlewares=admin-login-ratelimit"
