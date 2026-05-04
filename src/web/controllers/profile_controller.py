@@ -83,63 +83,13 @@ class CloudAdminController(BaseController):
                 ),
             )
 
-    @classmethod
-    def _render_modal(
-        cls,
-        web_context: AdminWebContext,
-        data: dict[str, str] | None = None,
-        errors: dict[str, str] | None = None,
-    ) -> Template:
+    @get(path='/cloud-admin-logout-confirm', name='cloud-admin-logout-confirm')
+    async def htmx_cloud_admin_logout_confirm(self, request: HTMXRequest) -> Template:
         return HTMXTemplate(
-            template_name='common/profile/cloud_admin_modal.html',
-            context=web_context.template_context
-            | {
-                'data': data or {},
-                'errors': errors or {},
-            },
+            template_name='common/profile/cloud_admin_logout_modal.html',
+            context=AdminWebContext(request).template_context,
             re_target='#modal-wrapper',
         )
-
-    @get(path='/cloud-admin-modal', name='cloud-admin-modal')
-    async def htmx_cloud_admin_modal(self, request: HTMXRequest) -> Template:
-        return self._render_modal(AdminWebContext(request))
-
-    @post(path='/cloud-admin-login', name='cloud-admin-login')
-    async def htmx_cloud_admin_login(
-        self,
-        request: HTMXRequest,
-        data: Annotated[
-            dict[str, str],
-            Body(media_type=RequestEncodingType.URL_ENCODED),
-        ],
-    ) -> Template | ClientRedirect:
-        web_context = AdminWebContext(request)
-        if not CLOUD_MODE:
-            return ClientRedirect('/')
-        errors: dict[str, str] = {}
-        password: str = WebContext.form_data_to_str(data or {}, 'password') or ''
-        with ConfigDatabase() as config_db:
-            stored_hash = config_db.load_cloud_admin_password_hash()
-        if not stored_hash:
-            errors['password'] = _('Admin password is not configured on this server.')
-        else:
-            ph = PasswordHasher()
-            try:
-                ph.verify(stored_hash, password)
-                if ph.check_needs_rehash(stored_hash):
-                    new_hash = ph.hash(password)
-                    with ConfigDatabase(write=True) as config_db:
-                        config_db.set_cloud_admin_password_hash(new_hash)
-                SessionCloudAdminAuthenticated(request).set(True)
-                Message.success(request, _('Successfully logged in as administrator.'))
-                return ClientRedirect('/')
-            except (VerifyMismatchError, VerificationError):
-                errors['password'] = _('Invalid password.')
-            except InvalidHash:
-                errors['password'] = _(
-                    'Something went wrong. Please ask the server administrator to restart the server with a valid ADMIN_PASSWORD.'
-                )
-        return self._render_modal(web_context, data=data, errors=errors)
 
     @post(path='/cloud-admin-logout', name='cloud-admin-logout')
     async def htmx_cloud_admin_logout(self, request: HTMXRequest) -> ClientRedirect:

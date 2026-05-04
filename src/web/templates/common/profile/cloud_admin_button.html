@@ -1,10 +1,10 @@
-{% with nav_title=_('Admin login') %}
-    <span class="sidebar-tooltip" {{ macros.tooltip_attributes('info', nav_title, 'right') }}>
-        {% if cloud_admin_authenticated %}
+{% if cloud_admin_authenticated %}
+    {% with nav_title=_('Log out as admin') %}
+        <span class="sidebar-tooltip" {{ macros.tooltip_attributes('info', nav_title, 'right') }}>
             <button
                 data-testid="cloud-admin-button"
                 class="nav-link text-start me-1 position-relative align-items-center"
-                hx-get="{{ url_for('cloud-admin-modal') }}"
+                hx-get="{{ url_for('cloud-admin-logout-confirm') }}"
                 hx-target="body"
                 hx-indicator="#please-wait"
                 data-bs-toggle="modal"
@@ -13,11 +13,15 @@
                 <div class="d-block">
                     <i class="bi bi-person-fill-check text-success"></i>
                     <span class="pe-2 expanded-only fw-bold">
-                        {{ _('Admin') }}
+                        {{ _('Log out') }}
                     </span>
                 </div>
             </button>
-        {% else %}
+        </span>
+    {% endwith %}
+{% else %}
+    {% with nav_title=_('Admin login') %}
+        <span class="sidebar-tooltip" {{ macros.tooltip_attributes('info', nav_title, 'right') }}>
             <a
                 data-testid="cloud-admin-button"
                 class="nav-link text-start me-1 position-relative align-items-center"
@@ -30,6 +34,6 @@
                     </span>
                 </div>
             </a>
-        {% endif %}
-    </span>
-{% endwith %}
+        </span>
+    {% endwith %}
+{% endif %}

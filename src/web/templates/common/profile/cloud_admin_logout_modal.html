@@ -1,0 +1,30 @@
+<div class="modal-dialog admin-profile-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">{{ _('Log out') }}</h2>
+        </div>
+        <div class="modal-body">
+            {{ _('Are you sure you want to log out as administrator?') }}
+        </div>
+        <div class="modal-footer">
+            <button
+                type="button"
+                class="btn btn-secondary text-nowrap d-inline-flex gap-2 align-items-center"
+                data-bs-dismiss="modal"
+            >
+                <i class="bi-x-circle-fill lh-1"></i>
+                {{ _('Cancel') }}
+            </button>
+            <button
+                class="btn btn-danger text-nowrap"
+                hx-post="{{ url_for('cloud-admin-logout') }}"
+                hx-target="body"
+                hx-indicator="#please-wait"
+                data-bs-dismiss="modal"
+            >
+                <i class="bi-person-fill-x pe-1"></i>
+                {{ _('Log out') }}
+            </button>
+        </div>
+    </div>
+</div>
