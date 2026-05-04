@@ -23,8 +23,8 @@ services:
       - "traefik.http.services.sharly-chess.loadbalancer.server.port=8080"
 
 networks:
-  ${TRAEFIK_NETWORK}:
-    external: true
+  name: ${TRAEFIK_NETWORK}
+  external: true
 
 volumes:
   sharly-chess-events:
