@@ -11,28 +11,34 @@ jobs:
     steps:
       - name: Hash admin password
         id: hash
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           pip install argon2-cffi --quiet
-          HASH=$(python3 -c "
+          HASH=$(python3 - <<'EOF'
+          import os
           from argon2 import PasswordHasher
-          print(PasswordHasher().hash('${{ secrets.ADMIN_PASSWORD }}'))
-          ")
+          print(PasswordHasher().hash(os.environ['ADMIN_PASSWORD']), end='')
+          EOF
+          )
           echo "::add-mask::$HASH"
-          echo "value=$HASH" >> $GITHUB_OUTPUT
+          # Base64-encode so the hash's $ chars survive SSH env var transport
+          echo "b64=$(printf '%s' "$HASH" | base64 -w 0)" >> $GITHUB_OUTPUT
 
       - name: SSH into VPS and deploy
         uses: appleboy/ssh-action@v1.0.3
         env:
-          ADMIN_PASSWORD_HASH: ${{ steps.hash.outputs.value }}
+          HASH_B64: ${{ steps.hash.outputs.b64 }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: ADMIN_PASSWORD_HASH
+          envs: HASH_B64
           script: |
             cd /opt/sharly-chess-cloud
             git pull origin main
+            HASH=$(printf '%s' "$HASH_B64" | base64 -d)
             sed -i '/^ADMIN_PASSWORD/d' .env
-            printf 'ADMIN_PASSWORD_HASH=%s\n' "$ADMIN_PASSWORD_HASH" >> .env
+            printf 'ADMIN_PASSWORD_HASH=%s\n' "$HASH" >> .env
             docker compose up -d --build
             docker image prune -f
